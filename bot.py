@@ -1,19 +1,13 @@
 import os
 import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from pysilpo import Silpo
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("BOT_TOKEN")
 PHONE = os.environ.get("SILPO_PHONE")
-
-# Діагностика
-logger.info(f"TOKEN exists: {TOKEN is not None}")
-logger.info(f"TOKEN length: {len(TOKEN) if TOKEN else 0}")
-logger.info(f"TOKEN preview: {TOKEN[:10] if TOKEN else 'None'}")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -28,28 +22,8 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
         await update.message.reply_text("Напиши назву товару. Наприклад: /price молоко")
         return
-    
     query = " ".join(context.args)
-    await update.message.reply_text(f"🔍 Шукаю '{query}'...")
-    
-    try:
-        silpo = Silpo(phone_number=PHONE)
-        products = list(Silpo.product.all())
-        
-        results = [p for p in products if query.lower() in p.title.lower()][:5]
-        
-        if not results:
-            await update.message.reply_text(f"Нічого не знайдено за запитом '{query}'")
-            return
-        
-        text = f"🛒 Результати для '{query}':\n\n"
-        for p in results:
-            text += f"• {p.title}\n  💰 {p.price} грн\n\n"
-        
-        await update.message.reply_text(text)
-    except Exception as e:
-        logger.error(f"Помилка: {e}")
-        await update.message.reply_text("Помилка при пошуку. Спробуй пізніше.")
+    await update.message.reply_text(f"🔍 Шукаю '{query}'... (поки в розробці)")
 
 async def watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ Функція відстеження — скоро буде!")
@@ -67,4 +41,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
 
+**`Procfile`** — заміни на:
+```
+worker: python bot.py

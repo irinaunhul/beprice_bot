@@ -1,5 +1,6 @@
-requests
-cryptography
-pysilpo
+requests==2.31.0
+cryptography==41.0.7
+pysilpo==1.0.2
 python-telegram-bot==20.3
 apscheduler==3.10.4
+httpx==0.24.1

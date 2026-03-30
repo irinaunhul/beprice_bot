@@ -2,4 +2,4 @@ requests==2.31.0
 cryptography==41.0.7
 pysilpo==1.0.2
 python-telegram-bot[job-queue]==20.7
-apscheduler==3.9.1
+apscheduler==3.10.4

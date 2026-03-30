@@ -62,10 +62,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
 
----
-
-**Файл 3 — `Procfile`** (для Railway)
-```
-worker: python bot.py

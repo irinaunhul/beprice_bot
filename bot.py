@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 TOKEN = os.environ.get("BOT_TOKEN")
 PHONE = os.environ.get("SILPO_PHONE")
 
+# Діагностика
+logger.info(f"TOKEN exists: {TOKEN is not None}")
+logger.info(f"TOKEN length: {len(TOKEN) if TOKEN else 0}")
+logger.info(f"TOKEN preview: {TOKEN[:10] if TOKEN else 'None'}")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привіт! Я бот для відстеження цін.\n\n"

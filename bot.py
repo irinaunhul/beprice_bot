@@ -41,8 +41,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-**`Procfile`** — заміни на:
-```
-worker: python bot.py

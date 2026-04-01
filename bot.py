@@ -50,8 +50,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(text_out, reply_markup=main_keyboard)
 
     elif text == "⚙️ Авторизація":
-    await update.message.reply_text(f"Надсилаю код на {PHONE}...")
-    try:
+            await update.message.reply_text(f"Надсилаю код на {PHONE}...")
+        try:
         global silpo_client
         silpo_client = Silpo(phone_number=PHONE)
         await update.message.reply_text(f"silpo_client створено: {type(silpo_client)}\nВведи код з SMS:")

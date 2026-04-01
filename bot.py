@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("BOT_TOKEN")
-WATCHED_FILE = "watched.json"
+WATCHED_FILE = "/data/watched.json"
 
 main_keyboard = ReplyKeyboardMarkup(
     [

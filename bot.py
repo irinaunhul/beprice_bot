@@ -49,6 +49,19 @@ def search_silpo(query):
     response = requests.post(url, json=payload, headers=headers, timeout=10)
     return response.json()
 
+def search_metro(query):
+    url = f"https://stores-api.zakaz.ua/stores/48215611/products/search/"
+    params = {"q": query, "per_page": 5}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36",
+        "x-chain": "metro",
+        "x-version": "65",
+        "Accept": "application/json",
+        "Origin": "https://metro.zakaz.ua",
+    }
+    response = requests.get(url, params=params, headers=headers, timeout=10)
+    return response.json()
+    
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Привіт! Я бот для відстеження цін у Сільпо.\n\nОбери дію:",
@@ -99,6 +112,24 @@ async def show_search_results(send_func, query):
     except Exception as e:
         logger.error(e)
         await send_func("Помилка пошуку.")
+        # Метро
+    try:
+        metro_data = search_metro(query)
+        metro_items = metro_data.get("results", [])
+        if metro_items:
+            metro_result = f"🏪 Метро для '{query}':\n\n"
+            for item in metro_items[:5]:
+                name = item.get("title", "?")
+                price = item.get("price", "?")
+                unit = item.get("unit", "")
+                old_price = item.get("original_price")
+                line = f"• {name} {unit}\n  💰 {price} грн"
+                if old_price and old_price != price:
+                    line += f" ~~{old_price}~~ 🔥"
+                metro_result += line + "\n\n"
+            await send_func(metro_result)
+    except Exception as e:
+        logger.error(f"Метро помилка: {e}")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text

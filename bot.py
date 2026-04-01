@@ -98,7 +98,7 @@ async def show_search_results(send_func, query):
         if not items:
             await send_func("Нічого не знайдено.")
             return
-        result = f"🛒 Результати для '{query}':\n\n"
+        result = f"🛒 Сільпо для '{query}':\n\n"
         for item in items[:5]:
             name = item.get("name", "?")
             price = item.get("price", "?")
@@ -120,9 +120,11 @@ async def show_search_results(send_func, query):
             metro_result = f"🏪 Метро для '{query}':\n\n"
             for item in metro_items[:5]:
                 name = item.get("title", "?")
-                price = item.get("price", "?")
-                unit = item.get("unit", "")
+                price = round(item.get("price", 0) / 100, 2)
                 old_price = item.get("original_price")
+                if old_price:
+                    old_price = round(old_price / 100, 2)
+                unit = item.get("unit", "")
                 line = f"• {name} {unit}\n  💰 {price} грн"
                 if old_price and old_price != price:
                     line += f" ~~{old_price}~~ 🔥"

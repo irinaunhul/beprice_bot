@@ -50,7 +50,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=main_keyboard
     )
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Твій chat_id: `{update.effective_chat.id}`", parse_mode="Markdown")
+    await update.message.reply_text(f"Твій chat_id: {update.effective_chat.id}")
 
 async def show_search_results(send_func, query):
     try:

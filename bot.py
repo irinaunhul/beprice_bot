@@ -65,7 +65,8 @@ async def show_search_results(send_func, query):
             name = item.get("name", "?")
             price = item.get("price", "?")
             old_price = item.get("oldPrice")
-            line = f"• {name}\n  💰 {price} грн"
+            unit = item.get("unit", "")
+            line = f"• {name} {unit}\n  💰 {price} грн"
             if old_price and old_price != price:
                 line += f" ~~{old_price}~~ 🔥"
             result += line + "\n\n"

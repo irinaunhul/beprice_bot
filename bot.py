@@ -2,6 +2,10 @@ import os
 import json
 import logging
 import requests
+from datetime import time
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+import requests
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
@@ -10,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("BOT_TOKEN")
 WATCHED_FILE = "/data/watched.json"
+CHAT_ID = os.environ.get("CHAT_ID")
 
 main_keyboard = ReplyKeyboardMarkup(
     [
@@ -51,6 +56,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Твій chat_id: {update.effective_chat.id}")
+
+async def check_sales(context: ContextTypes.DEFAULT_TYPE):
+    watched = load_watched()
+    if not watched:
+        return
+    found = []
+    for item in watched:
+        try:
+            data = search_silpo(item)
+            items = data.get("items", [])
+            for p in items[:3]:
+                if p.get("oldPrice") and p.get("oldPrice") != p.get("price"):
+                    found.append(f"🔥 {p['name']} {p.get('unit','')} — {p['price']} грн (було {p['oldPrice']} грн)")
+        except Exception as e:
+            logger.error(e)
+    if found:
+        text = "🛒 Акції на твої товари:\n\n" + "\n".join(found)
+        await context.bot.send_message(chat_id=CHAT_ID, text=text)
 
 async def show_search_results(send_func, query):
     try:
@@ -167,6 +190,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(TOKEN).build()
+    job_queue = app.job_queue
+    job_queue.run_daily(check_sales, time=time(8, 0))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("myid", myid))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

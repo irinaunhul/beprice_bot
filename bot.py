@@ -97,10 +97,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-І `requirements.txt` спрощуємо — прибираємо `pysilpo` і `cryptography` бо вони більше не потрібні:
-```
-requests
-python-telegram-bot==22.7
-httpx

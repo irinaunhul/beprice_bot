@@ -50,8 +50,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(text_out, reply_markup=main_keyboard)
 
     elif text == "⚙️ Авторизація":
-            await update.message.reply_text(f"Надсилаю код на {PHONE}...")
-        try:
+    await update.message.reply_text(f"Надсилаю код на {PHONE}...")
+    try:
         global silpo_client
         silpo_client = Silpo(phone_number=PHONE)
         await update.message.reply_text(f"silpo_client створено: {type(silpo_client)}\nВведи код з SMS:")
@@ -59,6 +59,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"ДЕТАЛЬНА ПОМИЛКА: {type(e).__name__}: {e}")
         await update.message.reply_text(f"Помилка: {type(e).__name__}: {str(e)[:200]}", reply_markup=main_keyboard)
+        
     elif context.user_data.get("action") == "otp":
         try:
             silpo_client.auth.verify_otp(update.message.text.strip())

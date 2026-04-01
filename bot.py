@@ -54,6 +54,9 @@ async def show_search_results(send_func, query):
     try:
         data = search_silpo(query)
         items = data.get("items", [])
+        if items:
+            logger.info(f"ITEM KEYS: {items[0].keys()}")
+            logger.info(f"ITEM DATA: {items[0]}")
         if not items:
             await send_func("Нічого не знайдено.")
             return

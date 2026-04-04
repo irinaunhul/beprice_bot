@@ -103,6 +103,7 @@
 <div id="content"></div>
 
 <script>
+  const API = 'https://bepricebot-production.up.railway.app';
   const tg = window.Telegram.WebApp;
   tg.expand();
 
@@ -204,11 +205,53 @@
       </div>`;
   }
 
-  async function showWatchlist() {
-    document.getElementById('content').innerHTML = '<div class="loading">Завантажую...</div>';
-    // Поки заглушка — потім підключимо до бота
-    document.getElementById('content').innerHTML = '<div class="empty">Список порожній</div>';
+async function showWatchlist() {
+  document.getElementById('content').innerHTML = '<div class="loading">Завантажую...</div>';
+  try {
+    const res = await fetch(`${API}/watched`);
+    const items = await res.json();
+    const content = document.getElementById('content');
+    if (!items.length) {
+      content.innerHTML = '<div class="empty">Список порожній</div>';
+      return;
+    }
+    content.innerHTML = '<div class="section-title">📋 Відстежувані товари</div>';
+    items.forEach(item => {
+      content.innerHTML += `
+        <div class="product-card" style="display:flex;justify-content:space-between;align-items:center">
+          <span class="product-name">${item}</span>
+          <button onclick="removeItem('${item}')" style="background:#ff3b30;padding:6px 10px;border-radius:8px;font-size:12px">✕</button>
+        </div>`;
+    });
+    content.innerHTML += `
+      <div style="margin-top:16px">
+        <input id="newItem" type="text" placeholder="Додати товар..." style="width:100%;margin-bottom:8px"/>
+        <button onclick="addItem()" style="width:100%">+ Додати</button>
+      </div>`;
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div class="empty">Помилка завантаження</div>';
   }
+}
+
+async function addItem() {
+  const item = document.getElementById('newItem').value.trim();
+  if (!item) return;
+  await fetch(`${API}/watched/add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item })
+  });
+  showWatchlist();
+}
+
+async function removeItem(item) {
+  await fetch(`${API}/watched/remove`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item })
+  });
+  showWatchlist();
+}
 
   async function showSales() {
     document.getElementById('content').innerHTML = '<div class="loading">🔥 Завантажую акції...</div>';

@@ -2,3 +2,4 @@ requests
 python-telegram-bot[job-queue]==22.7
 httpx
 apscheduler==3.10.4
+aiohttp

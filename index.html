@@ -127,37 +127,38 @@
   }
 
   async function search() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) return;
-    const content = document.getElementById('content');
-    content.innerHTML = '<div class="loading">🔍 Шукаю...</div>';
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">🔍 Шукаю...</div>';
 
-    const [silpoResults, metroResults] = await Promise.allSettled([
-      searchSilpo(query),
-      searchMetro(query)
-    ]);
+  const [silpoResults, metroResults, maudauResults] = await Promise.allSettled([
+    searchSilpo(query),
+    searchMetro(query),
+    searchMaudau(query)
+  ]);
 
-    content.innerHTML = '';
+  content.innerHTML = '';
 
-    if (silpoResults.status === 'fulfilled' && silpoResults.value.length) {
-      content.innerHTML += `<div class="section-title">🛒 Сільпо</div>`;
-      silpoResults.value.forEach(p => {
-        content.innerHTML += renderCard(p);
-      });
-    }
-
-    if (metroResults.status === 'fulfilled' && metroResults.value.length) {
-      content.innerHTML += `<div class="section-title" style="margin-top:16px">🏪 Метро</div>`;
-      metroResults.value.forEach(p => {
-        content.innerHTML += renderCard(p);
-      });
-    }
-
-    if (!content.innerHTML) {
-      content.innerHTML = '<div class="empty">Нічого не знайдено</div>';
-    }
+  if (silpoResults.status === 'fulfilled' && silpoResults.value.length) {
+    content.innerHTML += `<div class="section-title">🛒 Сільпо</div>`;
+    silpoResults.value.forEach(p => content.innerHTML += renderCard(p));
   }
 
+  if (metroResults.status === 'fulfilled' && metroResults.value.length) {
+    content.innerHTML += `<div class="section-title" style="margin-top:16px">🏪 Метро</div>`;
+    metroResults.value.forEach(p => content.innerHTML += renderCard(p));
+  }
+
+  if (maudauResults.status === 'fulfilled' && maudauResults.value.length) {
+    content.innerHTML += `<div class="section-title" style="margin-top:16px">🟡 Maudau</div>`;
+    maudauResults.value.forEach(p => content.innerHTML += renderCard(p));
+  }
+
+  if (!content.innerHTML) {
+    content.innerHTML = '<div class="empty">Нічого не знайдено</div>';
+  }
+}
   async function searchSilpo(query) {
     const res = await fetch('https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal', {
       method: 'POST',
@@ -194,6 +195,47 @@
       store: 'metro'
     }));
   }
+
+  async function searchMaudau(query) {
+  // Крок 1 — отримати ID товарів через автокомпліт
+  const autoRes = await fetch(
+    `https://backend.prod.maudau.click/v1/user/products/autocompletes?query=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        'x-app-name': 'storefront_web',
+        'x-app-platform': 'android',
+        'x-app-version': '1.22.5',
+        'x-app-device-id': 'a98bafb1-6f3b-4e59-bb25-e0c35e950574',
+        'Accept': 'application/json'
+      }
+    }
+  );
+  const autoData = await autoRes.json();
+  const ids = (autoData || []).slice(0, 5).map(p => p.id).join(',');
+  if (!ids) return [];
+
+  // Крок 2 — отримати деталі з цінами
+  const res = await fetch(
+    `https://backend.prod.maudau.click/v1/user/products/searches?product_ids=${ids}&per_page=5`,
+    {
+      headers: {
+        'x-app-name': 'storefront_web',
+        'x-app-platform': 'android',
+        'x-app-version': '1.22.5',
+        'x-app-device-id': 'a98bafb1-6f3b-4e59-bb25-e0c35e950574',
+        'Accept': 'application/json'
+      }
+    }
+  );
+  const data = await res.json();
+  return (data || []).map(p => ({
+    name: p.name || p.title || '?',
+    unit: p.unit_name || '',
+    price: p.price ? (p.price / 100).toFixed(2) : '?',
+    oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
+    store: 'maudau'
+  }));
+}
 
   function renderCard(p) {
     const discount = p.oldPrice && p.oldPrice != p.price

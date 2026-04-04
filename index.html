@@ -179,22 +179,15 @@
   }
 
   async function searchMetro(query) {
-    const res = await fetch(`https://stores-api.zakaz.ua/stores/48215611/products/search/?q=${encodeURIComponent(query)}&per_page=5`, {
-      headers: {
-        'x-chain': 'metro',
-        'x-version': '65',
-        'Accept': 'application/json'
-      }
-    });
-    const data = await res.json();
-    return (data.results || []).map(p => ({
-      name: p.title,
-      unit: p.unit || '',
-      price: (p.price / 100).toFixed(2),
-      oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
-      store: 'metro'
-    }));
-  }
+  const res = await fetch(`${API}/metro?q=${encodeURIComponent(query)}`);
+  const data = await res.json();
+  return (data.results || []).map(p => ({
+    name: p.title,
+    unit: p.unit || '',
+    price: (p.price / 100).toFixed(2),
+    oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
+  }));
+}
 
   async function searchMaudau(query) {
   // Крок 1 — отримати ID товарів через автокомпліт

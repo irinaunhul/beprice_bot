@@ -19,7 +19,7 @@ CHAT_ID = os.environ.get("CHAT_ID")
 main_keyboard = ReplyKeyboardMarkup(
     [
         [KeyboardButton("🔍 Пошук ціни"), KeyboardButton("👁 Відстежувати")],
-        [KeyboardButton("📋 Мій список")],
+        [KeyboardButton("📋 Мій список"), KeyboardButton("🔥 Акції Сільпо")],
     ],
     resize_keyboard=True
 )
@@ -144,6 +144,42 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Напиши назву товару для відстеження:")
         context.user_data["action"] = "watch"
 
+    elif text == "🔥 Акції Сільпо":
+        await update.message.reply_text("⏳ Завантажую акції...")
+        try:
+            url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
+            payload = {
+                "method": "GetSimpleCatalogItems",
+                "data": {
+                    "filialId": "2405",
+                    "skuPerPage": 10,
+                    "pageNumber": 1,
+                    "sortBy": "popularity",
+                    "onlyWithDiscounts": True
+                }
+            }
+            headers = {"Content-Type": "application/json;charset=UTF-8"}
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            data = response.json()
+            items = data.get("items", [])
+            if not items:
+                await update.message.reply_text("Акцій не знайдено.", reply_markup=main_keyboard)
+                return
+            text_out = "🔥 Акції Сільпо:\n\n"
+            for item in items:
+                name = item.get("name", "?")
+                price = item.get("price", "?")
+                old_price = item.get("oldPrice")
+                unit = item.get("unit", "")
+                line = f"• {name} {unit}\n  💰 {price} грн"
+                if old_price:
+                    line += f" (було {old_price} грн)"
+                text_out += line + "\n\n"
+            await update.message.reply_text(text_out, reply_markup=main_keyboard)
+        except Exception as e:
+            logger.error(e)
+            await update.message.reply_text("Помилка завантаження акцій.", reply_markup=main_keyboard)
+    
     elif text == "📋 Мій список":
         watched = load_watched()
         if not watched:

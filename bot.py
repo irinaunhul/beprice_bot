@@ -308,11 +308,15 @@ async def api_search_metro(request):
                     'Accept': 'application/json'
                 }
             ) as resp:
-                data = await resp.json()
+                logger.info(f"Metro status: {resp.status}")
+                text = await resp.text()
+                logger.info(f"Metro response: {text[:200]}")
+                data = await resp.json(content_type=None)
                 return web.json_response(data, headers={
                     'Access-Control-Allow-Origin': '*'
                 })
     except Exception as e:
+        logger.error(f"Metro error: {e}")
         return web.json_response({'results': []}, headers={
             'Access-Control-Allow-Origin': '*'
         })

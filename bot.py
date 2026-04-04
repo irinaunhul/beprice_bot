@@ -267,15 +267,70 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
 
+async def api_get_watched(request):
+    watched = load_watched()
+    return web.json_response(watched, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+async def api_add_watched(request):
+    data = await request.json()
+    item = data.get("item", "").strip()
+    if item:
+        watched = load_watched()
+        if item not in watched:
+            watched.append(item)
+            save_watched(watched)
+    return web.json_response({"ok": True}, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+async def api_remove_watched(request):
+    data = await request.json()
+    item = data.get("item", "").strip()
+    watched = load_watched()
+    if item in watched:
+        watched.remove(item)
+        save_watched(watched)
+    return web.json_response({"ok": True}, headers={
+        "Access-Control-Allow-Origin": "*"
+    })
+
+async def api_options(request):
+    return web.Response(headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+    })
+
+async def start_api():
+    app = web.Application()
+    app.router.add_get("/watched", api_get_watched)
+    app.router.add_post("/watched/add", api_add_watched)
+    app.router.add_post("/watched/remove", api_remove_watched)
+    app.router.add_options("/watched", api_options)
+    app.router.add_options("/watched/add", api_options)
+    app.router.add_options("/watched/remove", api_options)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    await site.start()
+
 def main():
-    app = Application.builder().token(TOKEN).build()
-    job_queue = app.job_queue
-    job_queue.run_daily(check_sales, time=time(8, 0))
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("myid", myid))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(CallbackQueryHandler(handle_callback))
-    app.run_polling()
+    async def run():
+        await start_api()
+        app = Application.builder().token(TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("myid", myid))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        app.add_handler(CallbackQueryHandler(handle_callback))
+        job_queue = app.job_queue
+        job_queue.run_daily(check_sales, time=time(8, 0))
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
+        await asyncio.Event().wait()
+    asyncio.run(run())
 
 if __name__ == "__main__":
     main()

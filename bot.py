@@ -296,6 +296,27 @@ async def api_remove_watched(request):
         "Access-Control-Allow-Origin": "*"
     })
 
+async def api_search_metro(request):
+    query = request.rel_url.query.get('q', '')
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f'https://stores-api.zakaz.ua/stores/48215611/products/search/?q={query}&per_page=5',
+                headers={
+                    'x-chain': 'metro',
+                    'x-version': '65',
+                    'Accept': 'application/json'
+                }
+            ) as resp:
+                data = await resp.json()
+                return web.json_response(data, headers={
+                    'Access-Control-Allow-Origin': '*'
+                })
+    except Exception as e:
+        return web.json_response({'results': []}, headers={
+            'Access-Control-Allow-Origin': '*'
+        })
+
 async def api_options(request):
     return web.Response(headers={
         "Access-Control-Allow-Origin": "*",
@@ -311,6 +332,8 @@ async def start_api():
     app.router.add_options("/watched", api_options)
     app.router.add_options("/watched/add", api_options)
     app.router.add_options("/watched/remove", api_options)
+    app.router.add_get("/metro", api_search_metro)
+    app.router.add_options("/metro", api_options)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)

@@ -62,10 +62,18 @@ def search_metro(query):
     response = requests.get(url, params=params, headers=headers, timeout=10)
     return response.json()
     
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "🛒 Відкрити BePrice",
+            web_app=WebAppInfo(url="https://irinaunhul.github.io/beprice_bot/")
+        )
+    ]])
     await update.message.reply_text(
-        "👋 Привіт! Я бот для відстеження цін у Сільпо.\n\nОбери дію:",
-        reply_markup=main_keyboard
+        "👋 Привіт! Я бот для відстеження цін.",
+        reply_markup=keyboard
     )
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Твій chat_id: {update.effective_chat.id}")

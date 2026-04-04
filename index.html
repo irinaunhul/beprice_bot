@@ -1,1 +1,244 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BePrice</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #000);
+      padding: 16px;
+    }
+    .search-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font-size: 16px;
+      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+      color: var(--tg-theme-text-color, #000);
+      outline: none;
+    }
+    button {
+      padding: 10px 16px;
+      background: var(--tg-theme-button-color, #2481cc);
+      color: var(--tg-theme-button-text-color, #fff);
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--tg-theme-text-color, #000);
+    }
+    .tab.active {
+      background: var(--tg-theme-button-color, #2481cc);
+      color: white;
+      border-color: transparent;
+    }
+    .product-card {
+      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .product-name { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+    .product-price { font-size: 18px; font-weight: 700; color: #2481cc; }
+    .product-old-price { font-size: 13px; color: #999; text-decoration: line-through; margin-left: 6px; }
+    .product-unit { font-size: 13px; color: #999; }
+    .product-store { font-size: 12px; color: #999; margin-bottom: 4px; }
+    .discount-badge {
+      display: inline-block;
+      background: #ff3b30;
+      color: white;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: 6px;
+    }
+    .loading { text-align: center; padding: 40px; color: #999; }
+    .empty { text-align: center; padding: 40px; color: #999; }
+    .section-title {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
 
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Назва товару..." />
+  <button onclick="search()">🔍</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('search', this)">Пошук</button>
+  <button class="tab" onclick="switchTab('watchlist', this)">📋 Список</button>
+  <button class="tab" onclick="switchTab('sales', this)">🔥 Акції</button>
+</div>
+
+<div id="content"></div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+
+  let currentTab = 'search';
+
+  function switchTab(tab, el) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    if (tab === 'search') {
+      document.getElementById('content').innerHTML = '';
+    } else if (tab === 'watchlist') {
+      showWatchlist();
+    } else if (tab === 'sales') {
+      showSales();
+    }
+  }
+
+  async function search() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    const content = document.getElementById('content');
+    content.innerHTML = '<div class="loading">🔍 Шукаю...</div>';
+
+    const [silpoResults, metroResults] = await Promise.allSettled([
+      searchSilpo(query),
+      searchMetro(query)
+    ]);
+
+    content.innerHTML = '';
+
+    if (silpoResults.status === 'fulfilled' && silpoResults.value.length) {
+      content.innerHTML += `<div class="section-title">🛒 Сільпо</div>`;
+      silpoResults.value.forEach(p => {
+        content.innerHTML += renderCard(p);
+      });
+    }
+
+    if (metroResults.status === 'fulfilled' && metroResults.value.length) {
+      content.innerHTML += `<div class="section-title" style="margin-top:16px">🏪 Метро</div>`;
+      metroResults.value.forEach(p => {
+        content.innerHTML += renderCard(p);
+      });
+    }
+
+    if (!content.innerHTML) {
+      content.innerHTML = '<div class="empty">Нічого не знайдено</div>';
+    }
+  }
+
+  async function searchSilpo(query) {
+    const res = await fetch('https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+      body: JSON.stringify({
+        method: 'GetSimpleCatalogItems',
+        data: { customFilter: query, filialId: '2405', skuPerPage: 5, pageNumber: 1 }
+      })
+    });
+    const data = await res.json();
+    return (data.items || []).map(p => ({
+      name: p.name,
+      unit: p.unit || '',
+      price: p.price,
+      oldPrice: p.oldPrice || null,
+      store: 'silpo'
+    }));
+  }
+
+  async function searchMetro(query) {
+    const res = await fetch(`https://stores-api.zakaz.ua/stores/48215611/products/search/?q=${encodeURIComponent(query)}&per_page=5`, {
+      headers: {
+        'x-chain': 'metro',
+        'x-version': '65',
+        'Accept': 'application/json'
+      }
+    });
+    const data = await res.json();
+    return (data.results || []).map(p => ({
+      name: p.title,
+      unit: p.unit || '',
+      price: (p.price / 100).toFixed(2),
+      oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
+      store: 'metro'
+    }));
+  }
+
+  function renderCard(p) {
+    const discount = p.oldPrice && p.oldPrice != p.price
+      ? `<span class="product-old-price">${p.oldPrice} грн</span><span class="discount-badge">🔥</span>`
+      : '';
+    return `
+      <div class="product-card">
+        <div class="product-name">${p.name} <span class="product-unit">${p.unit}</span></div>
+        <div>
+          <span class="product-price">${p.price} грн</span>
+          ${discount}
+        </div>
+      </div>`;
+  }
+
+  async function showWatchlist() {
+    document.getElementById('content').innerHTML = '<div class="loading">Завантажую...</div>';
+    // Поки заглушка — потім підключимо до бота
+    document.getElementById('content').innerHTML = '<div class="empty">Список порожній</div>';
+  }
+
+  async function showSales() {
+    document.getElementById('content').innerHTML = '<div class="loading">🔥 Завантажую акції...</div>';
+    try {
+      const res = await fetch('https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+        body: JSON.stringify({
+          method: 'GetSimpleCatalogItems',
+          data: { filialId: '2405', skuPerPage: 20, pageNumber: 1, onlyWithDiscounts: true }
+        })
+      });
+      const data = await res.json();
+      const items = data.items || [];
+      const content = document.getElementById('content');
+      content.innerHTML = '<div class="section-title">🔥 Акції Сільпо</div>';
+      items.forEach(p => {
+        content.innerHTML += renderCard({
+          name: p.name, unit: p.unit || '',
+          price: p.price, oldPrice: p.oldPrice
+        });
+      });
+    } catch(e) {
+      document.getElementById('content').innerHTML = '<div class="empty">Помилка завантаження</div>';
+    }
+  }
+
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') search();
+  });
+</script>
+</body>
+</html>

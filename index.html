@@ -133,11 +133,11 @@
   content.innerHTML = '<div class="loading">🔍 Шукаю...</div>';
 
   const [silpoResults, metroResults, maudauResults] = await Promise.allSettled([
-    console.log('maudau:', maudauResults);
     searchSilpo(query),
     searchMetro(query),
     searchMaudau(query)
   ]);
+    console.log('maudau:', maudauResults);
 
   content.innerHTML = '';
 

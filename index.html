@@ -205,7 +205,8 @@
     }
   );
   const autoData = await autoRes.json();
-  const ids = (autoData || []).slice(0, 5).map(p => p.id).join(',');
+  const items = autoData?.products || autoData?.data || autoData?.items || (Array.isArray(autoData) ? autoData : []);
+  const ids = items.slice(0, 5).map(p => p.id).join(',');
   if (!ids) return [];
 
   // Крок 2 — отримати деталі з цінами

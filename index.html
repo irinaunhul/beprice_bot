@@ -314,31 +314,54 @@ async function removeItem(item) {
   showWatchlist();
 }
 
-  async function showSales() {
+  let salesPage = 1;
+
+async function showSales(page = 1) {
+  if (page === 1) {
     document.getElementById('content').innerHTML = '<div class="loading">🔥 Завантажую акції...</div>';
-    try {
-      const res = await fetch('https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json;charset=UTF-8' },
-        body: JSON.stringify({
-          method: 'GetSimpleCatalogItems',
-          data: { filialId: '2405', skuPerPage: 20, pageNumber: 1, onlyWithDiscounts: true }
-        })
-      });
-      const data = await res.json();
-      const items = data.items || [];
-      const content = document.getElementById('content');
-      content.innerHTML = '<div class="section-title">🔥 Акції Сільпо</div>';
-      items.forEach(p => {
-        content.innerHTML += renderCard({
-          name: p.name, unit: p.unit || '',
-          price: p.price, oldPrice: p.oldPrice
-        });
-      });
-    } catch(e) {
-      document.getElementById('content').innerHTML = '<div class="empty">Помилка завантаження</div>';
-    }
+    salesPage = 1;
   }
+  try {
+    const res = await fetch('https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+      body: JSON.stringify({
+        method: 'GetSimpleCatalogItems',
+        data: { filialId: '2405', skuPerPage: 10, pageNumber: page, onlyWithDiscounts: true }
+      })
+    });
+    const data = await res.json();
+    const items = data.items || [];
+    const total = data.totalItems || 0;
+    const content = document.getElementById('content');
+
+    if (page === 1) {
+      content.innerHTML = '<div class="section-title">🔥 Акції Сільпо</div>';
+    } else {
+      document.getElementById('load-more-btn')?.remove();
+    }
+
+    items.forEach(p => {
+      content.innerHTML += renderCard({
+        name: p.name, unit: p.unit || '',
+        price: p.price, oldPrice: p.oldPrice
+      });
+    });
+
+    const loaded = (page - 1) * 10 + items.length;
+    if (loaded < total) {
+      content.innerHTML += `
+        <button id="load-more-btn" onclick="showSales(${page + 1})" 
+          style="width:100%;padding:12px;margin-top:8px;border-radius:12px;
+          background:var(--tg-theme-button-color,#2481cc);
+          color:var(--tg-theme-button-text-color,#fff);border:none;font-size:15px">
+          Показати ще (${loaded} з ${total})
+        </button>`;
+    }
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div class="empty">Помилка завантаження</div>';
+  }
+}
 
   document.getElementById('searchInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') search();

@@ -216,7 +216,6 @@ return items.slice(0, 5).map(p => {
     oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
   };
 });
-  const autoData = await autoRes.json();
   const items = autoData?.products || autoData?.data || autoData?.items || (Array.isArray(autoData) ? autoData : []);
   const ids = items.slice(0, 5).map(p => p.id).join(',');
   if (!ids) return [];

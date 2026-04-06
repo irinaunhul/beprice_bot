@@ -216,10 +216,6 @@ return items.slice(0, 5).map(p => {
     oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
   };
 });
-  const items = autoData?.products || autoData?.data || autoData?.items || (Array.isArray(autoData) ? autoData : []);
-  const ids = items.slice(0, 5).map(p => p.id).join(',');
-  if (!ids) return [];
-
   // Крок 2 — отримати деталі з цінами
   const res = await fetch(
     `https://backend.prod.maudau.click/v1/user/products/searches?product_ids=${ids}&per_page=5`,

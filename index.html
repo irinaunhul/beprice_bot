@@ -334,7 +334,7 @@ async function showSales(page = 1) {
     const items = data.items || [];
     console.log('sales data keys:', Object.keys(data));
     console.log('total:', data.totalItems, data.total, data.count);
-    const total = data.totalItems || 0;
+    const total = data.itemsCount || 0;
     const content = document.getElementById('content');
 
     if (page === 1) {

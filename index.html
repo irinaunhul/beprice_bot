@@ -193,9 +193,11 @@
   async function searchMaudau(query) {
   // Крок 1 — отримати ID товарів через автокомпліт
   const autoRes = await fetch(
-  `https://backend.prod.maudau.click/v1/user/products/searches?query=${encodeURIComponent(query)}&per_page=5`,
+  `https://backend.prod.maudau.click/v1/user/products/searches?query=${encodeURIComponent(query)}&per_page=5&locale=uk`,
   {
     headers: {
+      'Accept-Language': 'uk-UA',
+      'X-Language': 'uk',
       'x-app-name': 'storefront_web',
       'x-app-platform': 'android',
       'x-app-version': '1.22.5',
@@ -207,15 +209,14 @@
 const autoData = await autoRes.json();
 console.log('maudau raw:', autoData);
 const items = autoData?.products || autoData?.data || autoData?.items || (Array.isArray(autoData) ? autoData : []);
-return items.slice(0, 5).map(p => {
-  console.log('maudau item:', p);
-  return {
-    name: p.name || p.title || '?',
-    unit: p.unit_name || p.unit || '',
-    price: p.price ? (p.price / 100).toFixed(2) : '?',
-    oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
-  };
-});
+return items.slice(0, 5).map(p => ({
+  name: p.title || '?',
+  unit: '',
+  price: p.offer?.price ? (p.offer.price / 100).toFixed(2) : '?',
+  oldPrice: p.offer?.old_price && p.offer.old_price !== p.offer.price
+    ? (p.offer.old_price / 100).toFixed(2)
+    : null,
+}));
   // Крок 2 — отримати деталі з цінами
   const res = await fetch(
     `https://backend.prod.maudau.click/v1/user/products/searches?product_ids=${ids}&per_page=5`,

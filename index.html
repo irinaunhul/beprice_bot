@@ -193,15 +193,29 @@
   async function searchMaudau(query) {
   // Крок 1 — отримати ID товарів через автокомпліт
   const autoRes = await fetch(
-    `https://backend.prod.maudau.click/v1/user/products/autocompletes?query=${encodeURIComponent(query)}`,
-    {
-      headers: {
-        'x-app-name': 'storefront_web',
-        'x-app-platform': 'android',
-        'x-app-version': '1.22.5',
-        'x-app-device-id': 'a98bafb1-6f3b-4e59-bb25-e0c35e950574',
-        'Accept': 'application/json'
-      }
+  `https://backend.prod.maudau.click/v1/user/products/searches?query=${encodeURIComponent(query)}&per_page=5`,
+  {
+    headers: {
+      'x-app-name': 'storefront_web',
+      'x-app-platform': 'android',
+      'x-app-version': '1.22.5',
+      'x-app-device-id': 'a98bafb1-6f3b-4e59-bb25-e0c35e950574',
+      'Accept': 'application/json'
+    }
+  }
+);
+const autoData = await autoRes.json();
+console.log('maudau raw:', autoData);
+const items = autoData?.products || autoData?.data || autoData?.items || (Array.isArray(autoData) ? autoData : []);
+return items.slice(0, 5).map(p => {
+  console.log('maudau item:', p);
+  return {
+    name: p.name || p.title || '?',
+    unit: p.unit_name || p.unit || '',
+    price: p.price ? (p.price / 100).toFixed(2) : '?',
+    oldPrice: p.original_price ? (p.original_price / 100).toFixed(2) : null,
+  };
+});
     }
   );
   const autoData = await autoRes.json();
@@ -223,6 +237,7 @@
     }
   );
   const data = await res.json();
+  console.log('maudau item:', data[0]);
   return (data || []).map(p => ({
     name: p.name || p.title || '?',
     unit: p.unit_name || '',

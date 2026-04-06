@@ -6,10 +6,7 @@ import aiohttp
 from aiohttp import web
 import asyncio
 from datetime import time
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
-import requests
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 logging.basicConfig(level=logging.INFO)
@@ -53,7 +50,7 @@ def search_silpo(query):
     return response.json()
 
 def search_metro(query):
-    url = f"https://stores-api.zakaz.ua/stores/48215611/products/search/"
+    url = "https://stores-api.zakaz.ua/stores/48215611/products/search/"
     params = {"q": query, "per_page": 5}
     headers = {
         "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36",
@@ -64,8 +61,6 @@ def search_metro(query):
     }
     response = requests.get(url, params=params, headers=headers, timeout=10)
     return response.json()
-    
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([[
@@ -78,6 +73,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "👋 Привіт! Я бот для відстеження цін.",
         reply_markup=keyboard
     )
+
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Твій chat_id: {update.effective_chat.id}")
 
@@ -103,9 +99,6 @@ async def show_search_results(send_func, query):
     try:
         data = search_silpo(query)
         items = data.get("items", [])
-        if items:
-            logger.info(f"ITEM KEYS: {items[0].keys()}")
-            logger.info(f"ITEM DATA: {items[0]}")
         if not items:
             await send_func("Нічого не знайдено.")
             return
@@ -122,8 +115,8 @@ async def show_search_results(send_func, query):
         await send_func(result)
     except Exception as e:
         logger.error(e)
-        await send_func("Помилка пошуку.")
-        # Метро
+        await send_func("Помилка пошуку Сільпо.")
+
     try:
         metro_data = search_metro(query)
         metro_items = metro_data.get("results", [])
@@ -157,52 +150,49 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "🔥 Акції Сільпо":
         await update.message.reply_text("⏳ Завантажую акції...")
-    try:
-        url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
-        payload = {
-            "method": "GetSimpleCatalogItems",
-            "data": {
-                "filialId": "2405",
-                "skuPerPage": 10,
-                "pageNumber": 1,
-                "sortBy": "popularity",
-                "onlyWithDiscounts": True
+        try:
+            url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
+            payload = {
+                "method": "GetSimpleCatalogItems",
+                "data": {
+                    "filialId": "2405",
+                    "skuPerPage": 10,
+                    "pageNumber": 1,
+                    "sortBy": "popularity",
+                    "onlyWithDiscounts": True
+                }
             }
-        }
-        headers = {"Content-Type": "application/json;charset=UTF-8"}
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        data = response.json()
-        items = data.get("items", [])
-        total = data.get("totalItems", 0)
-        if not items:
-            await update.message.reply_text("Акцій не знайдено.", reply_markup=main_keyboard)
-            return
-        text_out = "🔥 Акції Сільпо (стор. 1):\n\n"
-        for item in items:
-            name = item.get("name", "?")
-            price = item.get("price", "?")
-            old_price = item.get("oldPrice")
-            unit = item.get("unit", "")
-            line = f"• {name} {unit}\n  💰 {price} грн"
-            if old_price:
-                line += f" (було {old_price} грн)"
-            text_out += line + "\n\n"
-        context.user_data["sales_page"] = 1
-        context.user_data["sales_total"] = total
-        loaded = len(items)
-        if loaded < total:
-            text_out += f"Показано {loaded} з {total}"
-            from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-            keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("Показати ще ➡️", callback_data="sales_page_2")
-            ]])
-            await update.message.reply_text(text_out, reply_markup=keyboard)
-        else:
-            await update.message.reply_text(text_out, reply_markup=main_keyboard)
-    except Exception as e:
-        logger.error(e)
-        await update.message.reply_text("Помилка завантаження акцій.", reply_markup=main_keyboard)
-    
+            headers = {"Content-Type": "application/json;charset=UTF-8"}
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            data = response.json()
+            items = data.get("items", [])
+            total = data.get("totalItems", 0)
+            if not items:
+                await update.message.reply_text("Акцій не знайдено.", reply_markup=main_keyboard)
+                return
+            text_out = "🔥 Акції Сільпо (стор. 1):\n\n"
+            for item in items:
+                name = item.get("name", "?")
+                price = item.get("price", "?")
+                old_price = item.get("oldPrice")
+                unit = item.get("unit", "")
+                line = f"• {name} {unit}\n  💰 {price} грн"
+                if old_price:
+                    line += f" (було {old_price} грн)"
+                text_out += line + "\n\n"
+            loaded = len(items)
+            if loaded < total:
+                text_out += f"Показано {loaded} з {total}"
+                keyboard = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("Показати ще ➡️", callback_data="sales_page_2")
+                ]])
+                await update.message.reply_text(text_out, reply_markup=keyboard)
+            else:
+                await update.message.reply_text(text_out, reply_markup=main_keyboard)
+        except Exception as e:
+            logger.error(e)
+            await update.message.reply_text("Помилка завантаження акцій.", reply_markup=main_keyboard)
+
     elif text == "📋 Мій список":
         watched = load_watched()
         if not watched:
@@ -269,47 +259,46 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
     elif data.startswith("sales_page_"):
-    page = int(data.split("_")[-1])
-    try:
-        url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
-        payload = {
-            "method": "GetSimpleCatalogItems",
-            "data": {
-                "filialId": "2405",
-                "skuPerPage": 10,
-                "pageNumber": page,
-                "sortBy": "popularity",
-                "onlyWithDiscounts": True
+        page = int(data.split("_")[-1])
+        try:
+            url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
+            payload = {
+                "method": "GetSimpleCatalogItems",
+                "data": {
+                    "filialId": "2405",
+                    "skuPerPage": 10,
+                    "pageNumber": page,
+                    "sortBy": "popularity",
+                    "onlyWithDiscounts": True
+                }
             }
-        }
-        headers = {"Content-Type": "application/json;charset=UTF-8"}
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        data_r = response.json()
-        items = data_r.get("items", [])
-        total = data_r.get("totalItems", 0)
-        text_out = f"🔥 Акції Сільпо (стор. {page}):\n\n"
-        for item in items:
-            name = item.get("name", "?")
-            price = item.get("price", "?")
-            old_price = item.get("oldPrice")
-            unit = item.get("unit", "")
-            line = f"• {name} {unit}\n  💰 {price} грн"
-            if old_price:
-                line += f" (було {old_price} грн)"
-            text_out += line + "\n\n"
-        loaded = (page - 1) * 10 + len(items)
-        if loaded < total:
-            text_out += f"Показано {loaded} з {total}"
-            from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-            keyboard = InlineKeyboardMarkup([[
-                InlineKeyboardButton("Показати ще ➡️", callback_data=f"sales_page_{page + 1}")
-            ]])
-            await query.message.reply_text(text_out, reply_markup=keyboard)
-        else:
-            await query.message.reply_text(text_out + "✅ Це всі акції!", reply_markup=main_keyboard)
-    except Exception as e:
-        logger.error(e)
-        await query.message.reply_text("Помилка.", reply_markup=main_keyboard)
+            headers = {"Content-Type": "application/json;charset=UTF-8"}
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            data_r = response.json()
+            items = data_r.get("items", [])
+            total = data_r.get("totalItems", 0)
+            text_out = f"🔥 Акції Сільпо (стор. {page}):\n\n"
+            for item in items:
+                name = item.get("name", "?")
+                price = item.get("price", "?")
+                old_price = item.get("oldPrice")
+                unit = item.get("unit", "")
+                line = f"• {name} {unit}\n  💰 {price} грн"
+                if old_price:
+                    line += f" (було {old_price} грн)"
+                text_out += line + "\n\n"
+            loaded = (page - 1) * 10 + len(items)
+            if loaded < total:
+                text_out += f"Показано {loaded} з {total}"
+                keyboard = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("Показати ще ➡️", callback_data=f"sales_page_{page + 1}")
+                ]])
+                await query.message.reply_text(text_out, reply_markup=keyboard)
+            else:
+                await query.message.reply_text(text_out + "✅ Це всі акції!", reply_markup=main_keyboard)
+        except Exception as e:
+            logger.error(e)
+            await query.message.reply_text("Помилка.", reply_markup=main_keyboard)
 
     elif data == "back_to_list":
         watched = load_watched()
@@ -325,9 +314,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def api_get_watched(request):
     watched = load_watched()
-    return web.json_response(watched, headers={
-        "Access-Control-Allow-Origin": "*"
-    })
+    return web.json_response(watched, headers={"Access-Control-Allow-Origin": "*"})
 
 async def api_add_watched(request):
     data = await request.json()
@@ -337,9 +324,7 @@ async def api_add_watched(request):
         if item not in watched:
             watched.append(item)
             save_watched(watched)
-    return web.json_response({"ok": True}, headers={
-        "Access-Control-Allow-Origin": "*"
-    })
+    return web.json_response({"ok": True}, headers={"Access-Control-Allow-Origin": "*"})
 
 async def api_remove_watched(request):
     data = await request.json()
@@ -348,9 +333,7 @@ async def api_remove_watched(request):
     if item in watched:
         watched.remove(item)
         save_watched(watched)
-    return web.json_response({"ok": True}, headers={
-        "Access-Control-Allow-Origin": "*"
-    })
+    return web.json_response({"ok": True}, headers={"Access-Control-Allow-Origin": "*"})
 
 async def api_search_metro(request):
     query = request.rel_url.query.get('q', '')
@@ -364,18 +347,11 @@ async def api_search_metro(request):
                     'Accept': 'application/json'
                 }
             ) as resp:
-                logger.info(f"Metro status: {resp.status}")
-                text = await resp.text()
-                logger.info(f"Metro response: {text[:200]}")
                 data = await resp.json(content_type=None)
-                return web.json_response(data, headers={
-                    'Access-Control-Allow-Origin': '*'
-                })
+                return web.json_response(data, headers={'Access-Control-Allow-Origin': '*'})
     except Exception as e:
         logger.error(f"Metro error: {e}")
-        return web.json_response({'results': []}, headers={
-            'Access-Control-Allow-Origin': '*'
-        })
+        return web.json_response({'results': []}, headers={'Access-Control-Allow-Origin': '*'})
 
 async def api_options(request):
     return web.Response(headers={

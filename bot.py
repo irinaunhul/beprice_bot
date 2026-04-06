@@ -156,7 +156,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["action"] = "watch"
 
     elif text == "🔥 Акції Сільпо":
-    await update.message.reply_text("⏳ Завантажую акції...")
+        await update.message.reply_text("⏳ Завантажую акції...")
     try:
         url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
         payload = {

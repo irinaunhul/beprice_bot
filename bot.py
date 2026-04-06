@@ -156,40 +156,52 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["action"] = "watch"
 
     elif text == "🔥 Акції Сільпо":
-        await update.message.reply_text("⏳ Завантажую акції...")
-        try:
-            url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
-            payload = {
-                "method": "GetSimpleCatalogItems",
-                "data": {
-                    "filialId": "2405",
-                    "skuPerPage": 10,
-                    "pageNumber": 1,
-                    "sortBy": "popularity",
-                    "onlyWithDiscounts": True
-                }
+    await update.message.reply_text("⏳ Завантажую акції...")
+    try:
+        url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
+        payload = {
+            "method": "GetSimpleCatalogItems",
+            "data": {
+                "filialId": "2405",
+                "skuPerPage": 10,
+                "pageNumber": 1,
+                "sortBy": "popularity",
+                "onlyWithDiscounts": True
             }
-            headers = {"Content-Type": "application/json;charset=UTF-8"}
-            response = requests.post(url, json=payload, headers=headers, timeout=10)
-            data = response.json()
-            items = data.get("items", [])
-            if not items:
-                await update.message.reply_text("Акцій не знайдено.", reply_markup=main_keyboard)
-                return
-            text_out = "🔥 Акції Сільпо:\n\n"
-            for item in items:
-                name = item.get("name", "?")
-                price = item.get("price", "?")
-                old_price = item.get("oldPrice")
-                unit = item.get("unit", "")
-                line = f"• {name} {unit}\n  💰 {price} грн"
-                if old_price:
-                    line += f" (було {old_price} грн)"
-                text_out += line + "\n\n"
+        }
+        headers = {"Content-Type": "application/json;charset=UTF-8"}
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        data = response.json()
+        items = data.get("items", [])
+        total = data.get("totalItems", 0)
+        if not items:
+            await update.message.reply_text("Акцій не знайдено.", reply_markup=main_keyboard)
+            return
+        text_out = "🔥 Акції Сільпо (стор. 1):\n\n"
+        for item in items:
+            name = item.get("name", "?")
+            price = item.get("price", "?")
+            old_price = item.get("oldPrice")
+            unit = item.get("unit", "")
+            line = f"• {name} {unit}\n  💰 {price} грн"
+            if old_price:
+                line += f" (було {old_price} грн)"
+            text_out += line + "\n\n"
+        context.user_data["sales_page"] = 1
+        context.user_data["sales_total"] = total
+        loaded = len(items)
+        if loaded < total:
+            text_out += f"Показано {loaded} з {total}"
+            from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("Показати ще ➡️", callback_data="sales_page_2")
+            ]])
+            await update.message.reply_text(text_out, reply_markup=keyboard)
+        else:
             await update.message.reply_text(text_out, reply_markup=main_keyboard)
-        except Exception as e:
-            logger.error(e)
-            await update.message.reply_text("Помилка завантаження акцій.", reply_markup=main_keyboard)
+    except Exception as e:
+        logger.error(e)
+        await update.message.reply_text("Помилка завантаження акцій.", reply_markup=main_keyboard)
     
     elif text == "📋 Мій список":
         watched = load_watched()
@@ -255,6 +267,49 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"✅ '{item}' видалено.\nНатисни на товар щоб видалити:",
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
+
+    elif data.startswith("sales_page_"):
+    page = int(data.split("_")[-1])
+    try:
+        url = "https://api.catalog.ecom.silpo.ua/api/2.0/exec/EcomCatalogGlobal"
+        payload = {
+            "method": "GetSimpleCatalogItems",
+            "data": {
+                "filialId": "2405",
+                "skuPerPage": 10,
+                "pageNumber": page,
+                "sortBy": "popularity",
+                "onlyWithDiscounts": True
+            }
+        }
+        headers = {"Content-Type": "application/json;charset=UTF-8"}
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        data_r = response.json()
+        items = data_r.get("items", [])
+        total = data_r.get("totalItems", 0)
+        text_out = f"🔥 Акції Сільпо (стор. {page}):\n\n"
+        for item in items:
+            name = item.get("name", "?")
+            price = item.get("price", "?")
+            old_price = item.get("oldPrice")
+            unit = item.get("unit", "")
+            line = f"• {name} {unit}\n  💰 {price} грн"
+            if old_price:
+                line += f" (було {old_price} грн)"
+            text_out += line + "\n\n"
+        loaded = (page - 1) * 10 + len(items)
+        if loaded < total:
+            text_out += f"Показано {loaded} з {total}"
+            from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("Показати ще ➡️", callback_data=f"sales_page_{page + 1}")
+            ]])
+            await query.message.reply_text(text_out, reply_markup=keyboard)
+        else:
+            await query.message.reply_text(text_out + "✅ Це всі акції!", reply_markup=main_keyboard)
+    except Exception as e:
+        logger.error(e)
+        await query.message.reply_text("Помилка.", reply_markup=main_keyboard)
 
     elif data == "back_to_list":
         watched = load_watched()

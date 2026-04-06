@@ -276,7 +276,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response = requests.post(url, json=payload, headers=headers, timeout=10)
             data_r = response.json()
             items = data_r.get("items", [])
-            total = data.get("itemsCount", 0)
+            total = data_r.get("itemsCount", 0)
             text_out = f"🔥 Акції Сільпо (стор. {page}):\n\n"
             for item in items:
                 name = item.get("name", "?")

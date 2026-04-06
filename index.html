@@ -137,7 +137,6 @@
     searchMetro(query),
     searchMaudau(query)
   ]);
-    console.log('maudau:', maudauResults);
 
   content.innerHTML = '';
 
@@ -206,7 +205,6 @@
   }
 );
 const autoData = await autoRes.json();
-console.log('maudau raw:', autoData);
 const items = autoData?.products || autoData?.data || autoData?.items || (Array.isArray(autoData) ? autoData : []);
 return items.slice(0, 5).map(p => ({
   name: p.title || '?',
@@ -230,7 +228,6 @@ return items.slice(0, 5).map(p => ({
     }
   );
   const data = await res.json();
-  console.log('maudau item:', data[0]);
   return (data || []).map(p => ({
     name: p.name || p.title || '?',
     unit: p.unit_name || '',
